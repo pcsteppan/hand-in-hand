@@ -1,0 +1,7 @@
+addons.make
+config.make
+Makefile
+openFrameworks-Info.plist
+Project.xcconfig
+zmqTest.xcodeproj
+.DS_STORE
