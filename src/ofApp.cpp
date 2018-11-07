@@ -2,14 +2,16 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
+    // FRAMERATE
+    ofSetFrameRate(30);
     
     // DEBUG GUI
     gui.setup();
     gui.add(threshold.setup("Background subtraction threshold", 0.5f, 0.0f, 1.0f));
     
     // ZMQ NETWORK
-    publisher.bind("tcp://*:9998");
-    subscriber.connect("tcp://192.168.1.186:9999");
+    publisher.bind("tcp://*:9999");
+    subscriber.connect("tcp://192.168.1.195:9998");
     
     grabberLocalRawHand.setup(WIDTH,HEIGHT,GL_RGB);
     
