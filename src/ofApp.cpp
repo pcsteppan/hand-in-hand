@@ -8,13 +8,13 @@ void ofApp::setup(){
     gui.add(threshold.setup("Background subtraction threshold", 0.5f, 0.0f, 1.0f));
     
     // ZMQ NETWORK
-    publisher.bind("tcp://*:9998");
-    subscriber.connect("tcp://192.168.1.186:9999");
+    publisher.bind("tcp://*:9999");
+    subscriber.connect("tcp://192.168.1.195:9998");
     
     grabberLocalRawHand.setup(WIDTH,HEIGHT,GL_RGBA);
     
     imgRemoteProcessedHand.allocate(WIDTH, HEIGHT, OF_IMAGE_COLOR);
-    pixRemoteProcessedHand.allocate(WIDTH, HEIGHT, OF_IMAGE_COLOR);
+    pixRemoteProcessedHand.allocate(WIDTH, HEIGHT, OF_IMAGE_GRAYSCALE);
     
     
     fboBackground.allocate(WIDTH, HEIGHT, GL_RGBA);
@@ -38,12 +38,14 @@ void ofApp::update(){
 		bufferTemp.clear();
 		subscriber.getNextMessage(bufferTemp);
         
-		pixRemoteProcessedHand.setFromPixels((unsigned char*) bufferTemp.getData(), 640, 480, OF_IMAGE_COLOR);
+		pixRemoteProcessedHand.setFromPixels((unsigned char*) bufferTemp.getData(), 640, 480, OF_IMAGE_GRAYSCALE);
         imgRemoteProcessedHand.setFromPixels(pixRemoteProcessedHand);
         imgRemoteProcessedHand.update();
     }
     
-    if (!publisher.send(grabberLocalRawHand.getPixels().getData(), 3 * 640 * 480 * sizeof(unsigned char)))
+    ofPixels pix;
+    fboLocalProcessedHand.readToPixels(pix);
+    if (!publisher.send(pix.getChannel('r').getData(), 1 * 640 * 480 * sizeof(unsigned char)))
 	{
 		cout << "send failed" << endl;
     }
