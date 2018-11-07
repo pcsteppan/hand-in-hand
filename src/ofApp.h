@@ -2,6 +2,7 @@
 
 #include "ofMain.h"
 #include "ofxZmq.h"
+#include "ofxGui.h"
 
 class ofApp : public ofBaseApp{
 
@@ -21,20 +22,40 @@ class ofApp : public ofBaseApp{
 		void windowResized(int w, int h);
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
-		
+        void loadShaders();
+    
+    // DEBUG GUI
+    ofxFloatSlider threshold;
+    ofxPanel gui;
+    
+    // ZMQ NETWORK
     ofxZmqSubscriber subscriber;
     ofxZmqPublisher publisher;
     
-    ofImage myImage;
-    ofPixels myPixels;
     
-    ofBuffer buffer;
+    // VIDEO PROCESSING
+    ofImage imgRemoteProcessedHand;
+    ofPixels pixRemoteProcessedHand;
+    
+    ofBuffer bufferTemp;
 
-    ofVideoGrabber grabber;
-    ofShader shader;
+    ofVideoGrabber grabberLocalRawHand;
+    ofFbo fboLocalProcessedHand;
     
-    bool bFirstFrame = true;
-    ofFbo bg;
+    ofFbo fboBackground;
+    
+    // SHADERS (AND SHADER ACCESSORIES)
+    ofShader shaderProcessor;
+    ofShader shaderInterplay;
     
     ofPlanePrimitive shaderPlane;
+    
+    
+    // FLAGS
+    bool bFirstFrame = true;
+    bool bDebug = true;
+    
+    // CONSTANTS
+    const int WIDTH = 640;
+    const int HEIGHT = 480;
 };
