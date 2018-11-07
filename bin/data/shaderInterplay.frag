@@ -15,8 +15,8 @@ void main()
     vec4 local = texture(pLocalProcessed, texCoordVarying);
     vec4 remote = texture(pRemote, texCoordVarying);
 
-    vec4 c = mix(local, remote, 0.5);
+    float c = mix(local.r, remote.r, 0.5);
     //vec4 c = local + remote;
     
-    outputColor = c;
+    outputColor = vec4(c,c,c,1.);
 }

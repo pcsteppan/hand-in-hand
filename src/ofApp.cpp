@@ -8,17 +8,17 @@ void ofApp::setup(){
     gui.add(threshold.setup("Background subtraction threshold", 0.5f, 0.0f, 1.0f));
     
     // ZMQ NETWORK
-    publisher.bind("tcp://*:9999");
-    subscriber.connect("tcp://192.168.1.195:9998");
+    publisher.bind("tcp://*:9998");
+    subscriber.connect("tcp://192.168.1.186:9999");
     
-    grabberLocalRawHand.setup(WIDTH,HEIGHT,GL_RGBA);
+    grabberLocalRawHand.setup(WIDTH,HEIGHT,GL_RGB);
     
     imgRemoteProcessedHand.allocate(WIDTH, HEIGHT, OF_IMAGE_COLOR);
     pixRemoteProcessedHand.allocate(WIDTH, HEIGHT, OF_IMAGE_GRAYSCALE);
     
     
-    fboBackground.allocate(WIDTH, HEIGHT, GL_RGBA);
-    fboLocalProcessedHand.allocate(WIDTH, HEIGHT, GL_RGBA);
+    fboBackground.allocate(WIDTH, HEIGHT, GL_RGB);
+    fboLocalProcessedHand.allocate(WIDTH, HEIGHT, GL_RGB);
     
     bufferTemp.allocate(3 * WIDTH * HEIGHT * sizeof(unsigned char));
     
