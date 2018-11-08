@@ -1,4 +1,5 @@
 #include "ofApp.h"
+#include "networkCredentials.h"
 
 //--------------------------------------------------------------
 void ofApp::setup(){
@@ -7,12 +8,25 @@ void ofApp::setup(){
     
     // DEBUG GUI
     gui.setup();
-    gui.add(threshold.setup("Background subtraction threshold", 0.5f, 0.0f, 1.0f));
+    gui.add(threshold.setup("Background subtraction threshold", 0.02f, 0.0f, 1.0f));
     
     // ZMQ NETWORK
-    publisher.bind("tcp://*:9999");
-    subscriber.connect("tcp://192.168.1.195:9998");
+    publisher.bind(publisherIP);
+    subscriber.connect(subscriberIP);
     
+    // UDP NETWORK
+    
+    /*
+    udpPublisher.Create();
+    udpPublisher.Connect("192.168.1.195",9998);
+    udpPublisher.SetNonBlocking(true);
+    
+    udpSubscriber.Create();
+    udpSubscriber.Bind(9999);
+    udpSubscriber.SetNonBlocking(true);
+     */
+    
+    // WEB CAMERA
     grabberLocalRawHand.setup(WIDTH,HEIGHT,GL_RGB);
     
     imgRemoteProcessedHand.allocate(WIDTH, HEIGHT, OF_IMAGE_COLOR);
@@ -22,7 +36,7 @@ void ofApp::setup(){
     fboBackground.allocate(WIDTH, HEIGHT, GL_RGB);
     fboLocalProcessedHand.allocate(WIDTH, HEIGHT, GL_RGB);
     
-    bufferTemp.allocate(3 * WIDTH * HEIGHT * sizeof(unsigned char));
+    bufferTemp.allocate(1 * WIDTH * HEIGHT * sizeof(unsigned char));
     
     shaderPlane.set(WIDTH,HEIGHT,10,10);
     shaderPlane.mapTexCoords(0,0,WIDTH,HEIGHT);
@@ -35,6 +49,9 @@ void ofApp::update(){
     grabberLocalRawHand.update();
     loadShaders();
     
+    
+    
+    // Receiving a packet
     while (subscriber.hasWaitingMessage())
 	{
 		bufferTemp.clear();
@@ -45,12 +62,72 @@ void ofApp::update(){
         imgRemoteProcessedHand.update();
     }
     
+    // Sending a packet
     ofPixels pix;
-    fboLocalProcessedHand.readToPixels(pix);
-    if (!publisher.send(pix.getChannel('r').getData(), 1 * 640 * 480 * sizeof(unsigned char)))
+    if(!bHandInFrame && danceFrames.size() > 0){
+        pix = danceFrames[ofGetFrameNum()%danceFrames.size()];
+    } else {
+        fboLocalProcessedHand.readToPixels(pix);
+    }
+    
+    
+    unsigned char * luminanceBufferPtr = pix.getChannel('r').getData();
+    if (!publisher.send(luminanceBufferPtr, 1 * 640 * 480 * sizeof(unsigned char)))
 	{
 		cout << "send failed" << endl;
+    } else {
+        // poll hand presence once every second
+        if(ofGetFrameNum() % 30 == 0){
+            // logic for hand detection and looping
+            if(!bHandInFrame && danceFrames.size() > 0) {
+                fboLocalProcessedHand.readToPixels(pix);
+            }
+            int sum = 0;
+            for (int i = 0; i < 640*480; i++) {
+                sum += pix[i];
+            }
+            cout << "sum: " << sum << endl;
+            if(sum > 1000000 && !bHandInFrame){
+                //pushback on vector
+                danceFrames.clear();
+                bHandInFrame = true;
+            } else if(sum < 1000000) {
+                //clear vector
+                
+                bHandInFrame = false;
+            }
+        }
+        
+        if(bHandInFrame){
+            danceFrames.push_back(ofImage(pix));
+            cout << danceFrames.size() << endl;
+        }
     }
+    
+    // UDP CODE, does not work due to limitations on packet size
+    // Another possible solution may be to break the image into max_packet_size chunks
+    // Another even coolor solution is to simply send the contour data (some vertices)
+        // Note: that's a tradeoff between processing and network speed
+    
+    /*
+    // SENDING UDP PACKET
+    ofPixels pix;
+    fboLocalProcessedHand.readToPixels(pix);
+    const char * pixPtr = (char*)pix.getChannel('r').getData();
+    udpPublisher.Send(pixPtr, 640*480);
+    
+    // -----------------
+    
+    // RECEIVING UDP PACKET
+    char udpMessage[640*480];
+    udpSubscriber.Receive(udpMessage,640*480);
+    
+    pixRemoteProcessedHand.setFromPixels((unsigned char*) udpMessage, 640, 480, OF_IMAGE_GRAYSCALE);
+    imgRemoteProcessedHand.setFromPixels(pixRemoteProcessedHand);
+    imgRemoteProcessedHand.update();
+    
+    // -----------------
+     */
 }
 
 //--------------------------------------------------------------
@@ -75,6 +152,7 @@ void ofApp::draw(){
     
     // Remove background from video grabber
     
+    
     fboLocalProcessedHand.begin();
     ofClear(0);
     shaderProcessor.begin();
@@ -94,9 +172,15 @@ void ofApp::draw(){
     
     
     
-    // Draw debug hands
+    // Draw historied hands or new hands
     
-    fboLocalProcessedHand.draw(0,0,320,240);
+    if (bHandInFrame || danceFrames.size() == 0){
+        fboLocalProcessedHand.draw(0,0,320,240);
+    }else {
+        danceFrames[ofGetFrameNum()%danceFrames.size()].draw(0,0,320,240);
+        cout << danceFrames.size() << ": " << ofGetFrameNum()%danceFrames.size() << endl;
+    }
+    
     imgRemoteProcessedHand.draw(320,0,320,240);
     
     // -----------------
@@ -107,7 +191,12 @@ void ofApp::draw(){
     
     shaderInterplay.begin();
     
-    shaderInterplay.setUniformTexture("pLocalProcessed", fboLocalProcessedHand.getTexture(), 1);
+    
+    if (bHandInFrame || danceFrames.size() == 0)
+        shaderInterplay.setUniformTexture("pLocalProcessed", fboLocalProcessedHand.getTexture(), 1);
+    else
+        shaderInterplay.setUniformTexture("pLocalProcessed", danceFrames[ofGetFrameNum()%danceFrames.size()].getTexture(), 1);
+
     shaderInterplay.setUniformTexture("pRemote", imgRemoteProcessedHand.getTexture(), 2);
     ofPushMatrix();
     ofTranslate(WIDTH/2, HEIGHT);

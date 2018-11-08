@@ -3,6 +3,7 @@
 #include "ofMain.h"
 #include "ofxZmq.h"
 #include "ofxGui.h"
+#include "ofxNetwork.h"
 
 class ofApp : public ofBaseApp{
 
@@ -32,6 +33,10 @@ class ofApp : public ofBaseApp{
     ofxZmqSubscriber subscriber;
     ofxZmqPublisher publisher;
     
+    // UDP NETWORK
+    //ofxUDPManager udpSubscriber;
+    //ofxUDPManager udpPublisher;
+    
     
     // VIDEO PROCESSING
     ofImage imgRemoteProcessedHand;
@@ -50,10 +55,13 @@ class ofApp : public ofBaseApp{
     
     ofPlanePrimitive shaderPlane;
     
+    // FRAMES
+    vector<ofImage> danceFrames;
     
     // FLAGS
     bool bFirstFrame = true;
     bool bDebug = true;
+    bool bHandInFrame = false;
     
     // CONSTANTS
     const int WIDTH = 640;
