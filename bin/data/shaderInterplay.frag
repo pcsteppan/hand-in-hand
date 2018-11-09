@@ -18,5 +18,5 @@ void main()
     float c = mix(local.r, remote.r, 0.5);
     //vec4 c = local + remote;
     
-    outputColor = vec4(c,c,c,1.);
+    outputColor = vec4(c,c,0.4-(c),1.);
 }

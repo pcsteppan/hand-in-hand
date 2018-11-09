@@ -4,11 +4,12 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     // FRAMERATE
-    ofSetFrameRate(30);
+    ofSetFrameRate(FRAMERATE);
     
     // DEBUG GUI
     gui.setup();
-    gui.add(threshold.setup("Background subtraction threshold", 0.02f, 0.0f, 1.0f));
+    gui.add(backgroundSubtractionThreshold.setup("Background subtraction threshold", 0.02f, 0.0f, 1.0f));
+    gui.add(handPresenceThreshold.setup("Hand presence threshold", 0.013f, 0.0f, 0.1f));
     
     // ZMQ NETWORK
     publisher.bind(publisherIP);
@@ -29,7 +30,7 @@ void ofApp::setup(){
     // WEB CAMERA
     grabberLocalRawHand.setup(WIDTH,HEIGHT,GL_RGB);
     
-    imgRemoteProcessedHand.allocate(WIDTH, HEIGHT, OF_IMAGE_COLOR);
+    imgRemoteProcessedHand.allocate(WIDTH, HEIGHT, OF_IMAGE_GRAYSCALE);
     pixRemoteProcessedHand.allocate(WIDTH, HEIGHT, OF_IMAGE_GRAYSCALE);
     
     
@@ -49,8 +50,6 @@ void ofApp::update(){
     grabberLocalRawHand.update();
     loadShaders();
     
-    
-    
     // Receiving a packet
     while (subscriber.hasWaitingMessage())
 	{
@@ -62,44 +61,55 @@ void ofApp::update(){
         imgRemoteProcessedHand.update();
     }
     
+    // local vars
+    unsigned char * luminanceBufferPtr;
+    
+    ofPixels pTemp;
+    pTemp.allocate(640, 480, OF_IMAGE_GRAYSCALE);
+    
+    
+    // fboLocalProcessedHand is RGB, but R, G, and B are the same value, 0-255
+    fboLocalProcessedHand.readToPixels(pTemp);
+    unsigned char * luminanceLiveBufferPtr = pTemp.getChannel('r').getData();
+    
     // Sending a packet
-    ofPixels pix;
     if(!bHandInFrame && danceFrames.size() > 0){
-        pix = danceFrames[ofGetFrameNum()%danceFrames.size()];
+        luminanceBufferPtr = danceFrames[ofGetFrameNum() % danceFrames.size()].getPixels().getData();
     } else {
-        fboLocalProcessedHand.readToPixels(pix);
+        luminanceBufferPtr = luminanceLiveBufferPtr;
     }
     
-    
-    unsigned char * luminanceBufferPtr = pix.getChannel('r').getData();
     if (!publisher.send(luminanceBufferPtr, 1 * 640 * 480 * sizeof(unsigned char)))
 	{
 		cout << "send failed" << endl;
     } else {
         // poll hand presence once every second
         if(ofGetFrameNum() % 30 == 0){
-            // logic for hand detection and looping
-            if(!bHandInFrame && danceFrames.size() > 0) {
-                fboLocalProcessedHand.readToPixels(pix);
-            }
-            int sum = 0;
-            for (int i = 0; i < 640*480; i++) {
-                sum += pix[i];
-            }
-            cout << "sum: " << sum << endl;
-            if(sum > 1000000 && !bHandInFrame){
-                //pushback on vector
-                danceFrames.clear();
+            if(isHandInFrame(luminanceLiveBufferPtr)){
+                if(!bHandInFrame){
+                    /*
+                    for(int i = 0; i < danceFrames.size(); i++) {
+                        delete[] danceFrames[i];
+                    }
+                     */
+                    danceFrames.clear();
+                }
                 bHandInFrame = true;
-            } else if(sum < 1000000) {
-                //clear vector
-                
+            } else {
                 bHandInFrame = false;
             }
         }
         
         if(bHandInFrame){
-            danceFrames.push_back(ofImage(pix));
+            //danceFrames.push_back(new unsigned char[640*480]);
+            //memcpy(danceFrames[danceFrames.size()-1], luminanceLiveBufferPtr, 640*480);
+            ofPixels p;
+            p.allocate(640,480,1);
+            p.setFromPixels(pTemp.getChannel('r').getData(), 640, 480, OF_IMAGE_GRAYSCALE);
+            ofImage i;
+            i.setFromPixels(p);
+            i.update();
+            danceFrames.push_back(ofImage(i));
             cout << danceFrames.size() << endl;
         }
     }
@@ -137,13 +147,14 @@ void ofApp::draw(){
     
     // Capture very first frame to substract from all future frames
     
-    if (bFirstFrame){
+    if ((bFirstFrame || bRefreshBackground) && grabberLocalRawHand.isFrameNew()){
         //fboBackground.clear();
         fboBackground.begin();
         grabberLocalRawHand.draw(0,0,640,480);
         fboBackground.end();
         bFirstFrame = false;
-    }
+        bRefreshBackground = false;
+    } //else if (!bFirstFrame) {
     
     // -----------------
     
@@ -157,7 +168,7 @@ void ofApp::draw(){
     ofClear(0);
     shaderProcessor.begin();
     
-    shaderProcessor.setUniform1f("threshold", threshold);
+    shaderProcessor.setUniform1f("threshold", backgroundSubtractionThreshold);
     shaderProcessor.setUniformTexture("pBackground", fboBackground.getTexture(), 1);
     shaderProcessor.setUniformTexture("pLocalRaw", grabberLocalRawHand.getTexture(),  2);
     ofPushMatrix();
@@ -174,9 +185,16 @@ void ofApp::draw(){
     
     // Draw historied hands or new hands
     
+    //ofTexture t;
+    //t.allocate(640, 480, GL_LUMINANCE);
+    //t.allocate(640,480,GL_R8);
+    
     if (bHandInFrame || danceFrames.size() == 0){
         fboLocalProcessedHand.draw(0,0,320,240);
     }else {
+        //t.loadData(danceFrames[ofGetFrameNum()%danceFrames.size()].getPixels().getData(), 640, 480, GL_LUMINANCE);
+        //t.draw(0,0,320,240);
+        danceFrames[ofGetFrameNum()%danceFrames.size()].update();
         danceFrames[ofGetFrameNum()%danceFrames.size()].draw(0,0,320,240);
         cout << danceFrames.size() << ": " << ofGetFrameNum()%danceFrames.size() << endl;
     }
@@ -210,6 +228,14 @@ void ofApp::draw(){
     // Debug GUI
     if(bDebug)
         gui.draw();
+    
+    if(bHandInFrame){
+        ofPushMatrix();
+        ofSetColor(0,255,255);
+        ofDrawRectangle(0,0,10,10);
+        ofPopMatrix();
+    }
+    //}
 }
 
 void ofApp::loadShaders(){
@@ -217,10 +243,39 @@ void ofApp::loadShaders(){
     shaderInterplay.load("shaderInterplay");
 }
 
+bool ofApp::isHandInFrame(unsigned char * p){
+    int sum = 0;
+    for (int i = 0; i < 640*480; i++) {
+        sum += p[i];
+    }
+    
+    
+    
+    const int HAND_THRESHOLD = (640*480*255*handPresenceThreshold);
+    
+    cout << "sum: " << sum << endl;
+    cout << "threshold: " << HAND_THRESHOLD << endl;
+    
+    return sum > HAND_THRESHOLD;
+    
+    /*
+    if(sum > HAND_THRESHOLD && !bHandInFrame){
+        //pushback on vector
+        //danceFrames.clear();
+        //bHandInFrame = true;
+        return true
+    } else if(sum < HAND_THRESHOLD) {
+        //clear vector
+        //bRefreshBackground = true;
+        bHandInFrame = false;
+    }
+    */
+}
+
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
     if(key == 'r')
-        bFirstFrame = true;
+        bRefreshBackground = true;
     else if(key == 'd')
         bDebug = !bDebug;
 }

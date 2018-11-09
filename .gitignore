@@ -4,4 +4,7 @@ Makefile
 openFrameworks-Info.plist
 Project.xcconfig
 zmqTest.xcodeproj
+src/networkCredentials.h
+bin/fiddledHandsDebug.app/
+fiddledHands.xcodeproj
 .DS_STORE

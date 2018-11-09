@@ -24,9 +24,11 @@ class ofApp : public ofBaseApp{
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
         void loadShaders();
+        bool isHandInFrame(unsigned char * p);
     
     // DEBUG GUI
-    ofxFloatSlider threshold;
+    ofxFloatSlider backgroundSubtractionThreshold;
+    ofxFloatSlider handPresenceThreshold;
     ofxPanel gui;
     
     // ZMQ NETWORK
@@ -56,14 +58,18 @@ class ofApp : public ofBaseApp{
     ofPlanePrimitive shaderPlane;
     
     // FRAMES
+    //vector<unsigned char *> danceFrames;
     vector<ofImage> danceFrames;
     
     // FLAGS
     bool bFirstFrame = true;
+    bool bRefreshBackground = false;
     bool bDebug = true;
     bool bHandInFrame = false;
     
     // CONSTANTS
     const int WIDTH = 640;
     const int HEIGHT = 480;
+    const int MAX_PERFORMANCE_LENGTH = 10;
+    const int FRAMERATE = 30;
 };

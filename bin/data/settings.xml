@@ -1,3 +1,4 @@
 <group>
-	<Background_subtraction_threshold>0.005</Background_subtraction_threshold>
+	<Background_subtraction_threshold>0.02</Background_subtraction_threshold>
+<group/>
 </group>
