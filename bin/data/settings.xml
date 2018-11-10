@@ -1,4 +1,5 @@
 <group>
 	<Background_subtraction_threshold>0.02</Background_subtraction_threshold>
 <group/>
+<Hand_presence_threshold>0.12</Hand_presence_threshold>
 </group>

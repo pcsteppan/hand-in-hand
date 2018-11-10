@@ -5,11 +5,12 @@
 void ofApp::setup(){
     // FRAMERATE
     ofSetFrameRate(FRAMERATE);
+    ofSetFullscreen(true);
     
     // DEBUG GUI
     gui.setup();
     gui.add(backgroundSubtractionThreshold.setup("Background subtraction threshold", 0.02f, 0.0f, 1.0f));
-    gui.add(handPresenceThreshold.setup("Hand presence threshold", 0.013f, 0.0f, 0.1f));
+    gui.add(handPresenceThreshold.setup("Hand presence threshold", 0.10f, 0.0f, 1.0f));
     
     // ZMQ NETWORK
     publisher.bind(publisherIP);
@@ -27,13 +28,26 @@ void ofApp::setup(){
     udpSubscriber.SetNonBlocking(true);
      */
     
+    // SYPHON NETWORK
+    /*
+    //mainOutputSyphonServer.setName("Screen Output");
+    individualTextureSyphonServer.setName("Texture Blue");
+    
+    mClient.setup();
+    
+    //using Syphon app Simple Server, found at http://syphon.v002.info/
+    mClient.set(subscriberIP,"Texture Red");
+    
+    syphonTex.allocate(640, 480, GL_LUMINANCE);
+    */
+     
     // WEB CAMERA
     grabberLocalRawHand.setup(WIDTH,HEIGHT,GL_RGB);
     
     imgRemoteProcessedHand.allocate(WIDTH, HEIGHT, OF_IMAGE_GRAYSCALE);
     pixRemoteProcessedHand.allocate(WIDTH, HEIGHT, OF_IMAGE_GRAYSCALE);
     
-    
+    art.allocate(WIDTH, HEIGHT, GL_RGB);
     fboBackground.allocate(WIDTH, HEIGHT, GL_RGB);
     fboLocalProcessedHand.allocate(WIDTH, HEIGHT, GL_RGB);
     
@@ -42,13 +56,18 @@ void ofApp::setup(){
     shaderPlane.set(WIDTH,HEIGHT,10,10);
     shaderPlane.mapTexCoords(0,0,WIDTH,HEIGHT);
     
+    playerPlane.set(ofGetWidth(), ofGetHeight(), 10, 10);
+    playerPlane.mapTexCoords(0,0,ofGetWidth(),ofGetHeight() );
+    
     loadShaders();
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
     grabberLocalRawHand.update();
-    loadShaders();
+    if (ofGetFrameNum() % FRAMERATE == 0) {
+        loadShaders();
+    }
     
     // Receiving a packet
     while (subscriber.hasWaitingMessage())
@@ -70,22 +89,15 @@ void ofApp::update(){
     
     // fboLocalProcessedHand is RGB, but R, G, and B are the same value, 0-255
     fboLocalProcessedHand.readToPixels(pTemp);
-    unsigned char * luminanceLiveBufferPtr = pTemp.getChannel('r').getData();
     
-    // Sending a packet
-    if(!bHandInFrame && danceFrames.size() > 0){
-        luminanceBufferPtr = danceFrames[ofGetFrameNum() % danceFrames.size()].getPixels().getData();
-    } else {
-        luminanceBufferPtr = luminanceLiveBufferPtr;
-    }
-    
-    if (!publisher.send(luminanceBufferPtr, 1 * 640 * 480 * sizeof(unsigned char)))
+    if (!publisher.send((!bHandInFrame && danceFrames.size() > 0) ? danceFrames[ofGetFrameNum() % danceFrames.size()].getPixels().getData() : pTemp.getChannel('r').getData(), 1 * 640 * 480 * sizeof(unsigned char)))
 	{
 		cout << "send failed" << endl;
     } else {
+        //individualTextureSyphonServer.publishTexture(&((!bHandInFrame && danceFrames.size() > 0) ? danceFrames[ofGetFrameNum() % danceFrames.size()].getTexture() : fboLocalProcessedHand.getTexture()));
         // poll hand presence once every second
         if(ofGetFrameNum() % 30 == 0){
-            if(isHandInFrame(luminanceLiveBufferPtr)){
+            if(isHandInFrame(pTemp.getChannel('r').getData())){
                 if(!bHandInFrame){
                     /*
                     for(int i = 0; i < danceFrames.size(); i++) {
@@ -103,13 +115,10 @@ void ofApp::update(){
         if(bHandInFrame){
             //danceFrames.push_back(new unsigned char[640*480]);
             //memcpy(danceFrames[danceFrames.size()-1], luminanceLiveBufferPtr, 640*480);
-            ofPixels p;
-            p.allocate(640,480,1);
-            p.setFromPixels(pTemp.getChannel('r').getData(), 640, 480, OF_IMAGE_GRAYSCALE);
             ofImage i;
-            i.setFromPixels(p);
-            i.update();
-            danceFrames.push_back(ofImage(i));
+            danceFrames.push_back(i);
+            danceFrames.back().setFromPixels(pTemp.getChannel('r').getData(), 640, 480, OF_IMAGE_GRAYSCALE);
+            danceFrames.back().update();
             cout << danceFrames.size() << endl;
         }
     }
@@ -142,7 +151,7 @@ void ofApp::update(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-    
+    ofSetColor(255);
     //ofClear(20,20,20,255);
     
     // Capture very first frame to substract from all future frames
@@ -157,8 +166,6 @@ void ofApp::draw(){
     } //else if (!bFirstFrame) {
     
     // -----------------
-    
-    
     
     
     // Remove background from video grabber
@@ -207,6 +214,8 @@ void ofApp::draw(){
     
     // Draw future art
     
+    art.begin();
+    ofClear(0);
     shaderInterplay.begin();
     
     
@@ -217,13 +226,16 @@ void ofApp::draw(){
 
     shaderInterplay.setUniformTexture("pRemote", imgRemoteProcessedHand.getTexture(), 2);
     ofPushMatrix();
-    ofTranslate(WIDTH/2, HEIGHT);
+    ofTranslate(WIDTH/2, HEIGHT/2);
     shaderPlane.draw();
     ofPopMatrix();
     
     shaderInterplay.end();
-    
+    art.end();
     // -----------------
+    
+    art.draw(-ofGetWidth() * 0.25, 0,
+             ofGetWidth() * 1.5, ofGetHeight());
     
     // Debug GUI
     if(bDebug)
@@ -274,10 +286,19 @@ bool ofApp::isHandInFrame(unsigned char * p){
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-    if(key == 'r')
+    if(key == 'r'){
         bRefreshBackground = true;
-    else if(key == 'd')
+    }
+    else if(key == 'd'){
         bDebug = !bDebug;
+        if(bDebug){
+            ofHideCursor();
+        }else{
+            ofShowCursor();
+        }
+        //playerPlane.set(ofGetWidth(), ofGetHeight(), 10, 10);
+        //playerPlane.mapTexCoords(0,0,ofGetWidth(),ofGetHeight());
+    }
 }
 
 //--------------------------------------------------------------

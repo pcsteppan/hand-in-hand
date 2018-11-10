@@ -3,7 +3,8 @@
 #include "ofMain.h"
 #include "ofxZmq.h"
 #include "ofxGui.h"
-#include "ofxNetwork.h"
+#include "ofxSyphon.h"
+//#include "ofxNetwork.h"
 
 class ofApp : public ofBaseApp{
 
@@ -39,6 +40,13 @@ class ofApp : public ofBaseApp{
     //ofxUDPManager udpSubscriber;
     //ofxUDPManager udpPublisher;
     
+    // SYPHON NETWORK
+    ofTexture syphonTex;
+    
+    ofxSyphonServer mainOutputSyphonServer;
+    ofxSyphonServer individualTextureSyphonServer;
+    
+    ofxSyphonClient mClient;
     
     // VIDEO PROCESSING
     ofImage imgRemoteProcessedHand;
@@ -56,6 +64,9 @@ class ofApp : public ofBaseApp{
     ofShader shaderInterplay;
     
     ofPlanePrimitive shaderPlane;
+    ofPlanePrimitive playerPlane;
+    
+    ofFbo art;
     
     // FRAMES
     //vector<unsigned char *> danceFrames;
@@ -71,5 +82,6 @@ class ofApp : public ofBaseApp{
     const int WIDTH = 640;
     const int HEIGHT = 480;
     const int MAX_PERFORMANCE_LENGTH = 10;
-    const int FRAMERATE = 30;
+    const int FRAMERATE = 15
+    ;
 };
