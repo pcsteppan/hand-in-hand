@@ -28,8 +28,11 @@ class ofApp : public ofBaseApp{
         bool isHandInFrame(unsigned char * p);
     
     // DEBUG GUI
-    ofxFloatSlider backgroundSubtractionThreshold;
+    ofxFloatSlider backgroundSubtractionThresholdA;
+    ofxFloatSlider backgroundSubtractionThresholdB;
     ofxFloatSlider handPresenceThreshold;
+    ofxFloatSlider sideMargin;
+    ofxFloatSlider topMargin;
     ofxPanel gui;
     
     // ZMQ NETWORK
@@ -81,7 +84,6 @@ class ofApp : public ofBaseApp{
     // CONSTANTS
     const int WIDTH = 640;
     const int HEIGHT = 480;
-    const int MAX_PERFORMANCE_LENGTH = 10;
-    const int FRAMERATE = 15
-    ;
+    const int MAX_PERFORMANCE_LENGTH = 20;
+    const int FRAMERATE = 20;
 };

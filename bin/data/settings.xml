@@ -1,5 +1,5 @@
 <group>
-	<Background_subtraction_threshold>0.02</Background_subtraction_threshold>
-<group/>
-<Hand_presence_threshold>0.12</Hand_presence_threshold>
+	<Bg-sub:_A>0.945</Bg-sub:_A>
+	<Bg-sub:_B>0.03</Bg-sub:_B>
+	<Hand_presence_threshold>0</Hand_presence_threshold>
 </group>
