@@ -3,7 +3,7 @@
 #include "ofMain.h"
 #include "ofxZmq.h"
 #include "ofxGui.h"
-#include "ofxSyphon.h"
+//#include "ofxSyphon.h"
 //#include "ofxNetwork.h"
 
 class ofApp : public ofBaseApp{
@@ -28,7 +28,8 @@ class ofApp : public ofBaseApp{
         bool isHandInFrame(unsigned char * p);
     
     // DEBUG GUI
-    ofxFloatSlider backgroundSubtractionThreshold;
+    ofxFloatSlider thresholdA;
+    ofxFloatSlider thresholdB;
     ofxFloatSlider handPresenceThreshold;
     ofxPanel gui;
     
@@ -41,13 +42,14 @@ class ofApp : public ofBaseApp{
     //ofxUDPManager udpPublisher;
     
     // SYPHON NETWORK
+    /*
     ofTexture syphonTex;
     
     ofxSyphonServer mainOutputSyphonServer;
     ofxSyphonServer individualTextureSyphonServer;
     
     ofxSyphonClient mClient;
-    
+    */
     // VIDEO PROCESSING
     ofImage imgRemoteProcessedHand;
     ofPixels pixRemoteProcessedHand;

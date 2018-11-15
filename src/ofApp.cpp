@@ -9,8 +9,9 @@ void ofApp::setup(){
     
     // DEBUG GUI
     gui.setup();
-    gui.add(backgroundSubtractionThreshold.setup("Background subtraction threshold", 0.02f, 0.0f, 1.0f));
     gui.add(handPresenceThreshold.setup("Hand presence threshold", 0.10f, 0.0f, 1.0f));
+    gui.add(thresholdA.setup("thresholdA", 0.90f, 0.0f, 1.0f));
+    gui.add(thresholdB.setup("thresholdB", 0.50f, 0.0f, 1.0f));
     
     // ZMQ NETWORK
     publisher.bind(publisherIP);
@@ -90,7 +91,7 @@ void ofApp::update(){
     // fboLocalProcessedHand is RGB, but R, G, and B are the same value, 0-255
     fboLocalProcessedHand.readToPixels(pTemp);
     
-    if (!publisher.send((!bHandInFrame && danceFrames.size() > 0) ? danceFrames[ofGetFrameNum() % danceFrames.size()].getPixels().getData() : pTemp.getChannel('r').getData(), 1 * 640 * 480 * sizeof(unsigned char)))
+    if (!publisher.send((!bHandInFrame && danceFrames.size() > 0) ? danceFrames[ofGetFrameNum() % danceFrames.size()].getPixels().getChannel('r').getData() : pTemp.getChannel('r').getData(), 1 * 640 * 480 * sizeof(unsigned char)))
 	{
 		cout << "send failed" << endl;
     } else {
@@ -98,7 +99,7 @@ void ofApp::update(){
         // poll hand presence once every second
         if(ofGetFrameNum() % 30 == 0){
             if(isHandInFrame(pTemp.getChannel('r').getData())){
-                if(!bHandInFrame){
+                if(!bHandInFrame || danceFrames.size() > FRAMERATE * MAX_PERFORMANCE_LENGTH){
                     /*
                     for(int i = 0; i < danceFrames.size(); i++) {
                         delete[] danceFrames[i];
@@ -175,7 +176,8 @@ void ofApp::draw(){
     ofClear(0);
     shaderProcessor.begin();
     
-    shaderProcessor.setUniform1f("threshold", backgroundSubtractionThreshold);
+    shaderProcessor.setUniform1f("thresholdA", thresholdA);
+    shaderProcessor.setUniform1f("thresholdB", thresholdB);
     shaderProcessor.setUniformTexture("pBackground", fboBackground.getTexture(), 1);
     shaderProcessor.setUniformTexture("pLocalRaw", grabberLocalRawHand.getTexture(),  2);
     ofPushMatrix();
@@ -244,7 +246,7 @@ void ofApp::draw(){
     if(bHandInFrame){
         ofPushMatrix();
         ofSetColor(0,255,255);
-        ofDrawRectangle(0,0,10,10);
+        ofDrawRectangle(0,0,5,5);
         ofPopMatrix();
     }
     //}
@@ -291,7 +293,7 @@ void ofApp::keyPressed(int key){
     }
     else if(key == 'd'){
         bDebug = !bDebug;
-        if(bDebug){
+        if(!bDebug){
             ofHideCursor();
         }else{
             ofShowCursor();
